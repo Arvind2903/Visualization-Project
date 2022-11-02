@@ -1,0 +1,388 @@
+---
+title: "Visualization Project"
+author: "Arvind Raghavendran \n MDS202214"
+date: "2022-10-30"
+output:
+  html_document: default
+  pdf_document: default
+---
+<style>
+h3 {
+    text-align: center;
+}
+</style>
+<h3>Abstract</h3>
+<h5>
+The project is an attempt to visually depict and analyze the World Happiness 
+Report and key factors that affect the same. We begin with a brief overview about the data and the various features present. We then perform EDA and present some key graphs
+whilst drawing conclusions from them and finish with a peek into the analysis 
+the dashboard would provide in later stages.
+</h5>
+
+<h3>Introduction</h3>
+<h5>
+The World Happiness Report survey of the state of global happiness. The first 
+report was published in 2012. The World Happiness 2019 ranked 155 countries 
+by their happiness levels. The report continues to gain global recognition as 
+governments, organizations and civil society increasingly use happiness 
+indicators to inform their policy-making decisions. Leading experts across
+fields describe how measurements of well-being can be used effectively to 
+assess the progress of nations. The reports review the state of happiness in the world today and show how the new science of happiness explains personal and national variations in happiness.
+</h5>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message = FALSE, 
+                      fig.height = 5, fig.width = 10, fig.align = "center")
+```
+
+```{r}
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dplyr)
+library(tidyr)
+library(data.table)
+library(DT)
+library(corrplot)
+```
+
+```{r}
+f1 = "C:\\Users\\arvin\\Downloads\\World Happiness Data\\2015.csv"
+df2015 = read.csv(f1)
+f2 = "C:\\Users\\arvin\\Downloads\\World Happiness Data\\2016.csv"
+df2016 = read.csv(f2)
+f3 = "C:\\Users\\arvin\\Downloads\\World Happiness Data\\2017.csv"
+df2017 = read.csv(f3)
+f4 = "C:\\Users\\arvin\\Downloads\\World Happiness Data\\2018.csv"
+df2018 = read.csv(f4)
+f5 = "C:\\Users\\arvin\\Downloads\\World Happiness Data\\2019.csv"
+df2019 = read.csv(f5)
+names(df2018) = c('Happiness.Rank','Country','Happiness.Score',
+                  'Economy..GDP.per.Capita.', 'Family', 
+                  'Health..Life.Expectancy.', 'Freedom', 'Generosity', 
+                  'Trust..Government.Corruption.')
+names(df2019) = c('Happiness.Rank','Country','Happiness.Score',
+                  'Economy..GDP.per.Capita.', 'Family', 
+                  'Health..Life.Expectancy.', 'Freedom', 'Generosity', 
+                  'Trust..Government.Corruption.')
+
+countries = sort( unique(c(df2015$Country,df2016$Country,df2017$Country,df2018$Country,df2019$Country)))
+
+for (country in countries){
+    if (!(country %in% df2015$Country)){
+      df2015[nrow(df2015) + 1,] = c(country,rep(NA, ncol(df2015)-1))
+    }
+}
+for (country in countries){
+  if (!(country %in% df2016$Country)){
+    df2016[nrow(df2016) + 1,] = c(country,rep(NA, ncol(df2016)-1))
+  }
+}
+for (country in countries){
+  if (!(country %in% df2017$Country)){
+    df2017[nrow(df2017) + 1,] = c(country,rep(NA, ncol(df2017)-1))
+  }
+}
+for (country in countries){
+  if (!(country %in% df2018$Country)){
+    df2018[nrow(df2018) + 1,] = c(NA,country,rep(NA, ncol(df2018)-2))
+  }
+}
+for (country in countries){
+  if (!(country %in% df2019$Country)){
+    df2019[nrow(df2019) + 1,] = c(NA,country,rep(NA, ncol(df2019)-2))
+  }
+}
+cdf2015 = df2015[order(df2015$Country),]
+cdf2016 = df2016[order(df2016$Country),]
+cdf2017 = df2017[order(df2017$Country),]
+cdf2018 = df2018[order(df2018$Country),]
+cdf2019 = df2019[order(df2019$Country),]
+```
+
+<h3>About the data</h3>
+<h5>
+The data was available as 5 files, each for the years 2015-2019. The factors (variables) in the data are GDP per capita, relationship with Family, Life Expectancy, Freedom offered by the government, Generosity of the people and Trust in the government. We will take a look at the central tendencies concerning the spread of happiness in 2019.
+</h5>
+```{r}
+df2019[] = lapply(df2019, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+ct = data.frame(matrix(NA,nrow=6,ncol = 8))
+names(ct) = c("Central Tendency","Happiness Score", "GDP", "Family", "Life Expectancy","Freedom", "Generosity", "Trust in Government")
+getmode <- function(v) {
+   uniqv <- unique(v);
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+ct$`Central Tendency` = c("Mean","Median","Variance","Standard Deviation","Max", "Min")
+ct[ct$`Central Tendency`=="Mean",][1,2:ncol(ct)] = sapply(df2019[1:156,3:9], mean, na.rm=T)
+ct[ct$`Central Tendency`=="Median",][1,2:ncol(ct)] = sapply(df2019[1:156,3:9], median, na.rm=T)
+ct[ct$`Central Tendency`=="Variance",][1,2:ncol(ct)] = sapply(df2019[1:156,3:9], var, na.rm=T)
+ct[ct$`Central Tendency`=="Standard Deviation",][1,2:ncol(ct)] = sapply(sapply(df2019[1:156,3:9], var, na.rm=T), sqrt)
+ct[ct$`Central Tendency`=="Max",][1,2:ncol(ct)] = sapply(df2019[1:156,3:9], max, na.rm=T)
+ct[ct$`Central Tendency`=="Min",][1,2:ncol(ct)] = sapply(df2019[1:156,3:9], min, na.rm=T)
+ct[] = lapply(ct, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+datatable(
+  ct,
+  height = 200,
+  options = list(scrollX=TRUE)
+)
+```
+
+```{r}
+happiness = as.data.frame(cbind(countries,cdf2015$Happiness.Score,cdf2016$Happiness.Score, cdf2017$Happiness.Score,cdf2018$Happiness.Score, cdf2019$Happiness.Score))
+names(happiness) = c('Country','2015', '2016', '2017', '2018', '2019')
+for (country in countries){
+  happiness[which(happiness$Country==country),][which(is.na(happiness[which(happiness$Country==country),]))]=median(as.numeric(happiness[which(happiness$Country==country),2:ncol(happiness)]), na.rm=T)
+}
+hc = happiness[order(happiness$`2019`, decreasing =TRUE),]$Country[1:5]
+happiness[] = lapply(happiness, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+```
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<h5>
+A point to be observed would be the relatively large variance in Happiness Score, indicating that there is a disproportionate spread of happiness throughout the world. Let us look at this trend in the past.
+</h5>
+```{r, out.width="75%"}
+vard = as.data.frame(matrix(NA,nrow=1,ncol=6))
+names(vard) = c("Central Tendency", '2015', '2016', '2017', '2018', '2019')
+vard$`Central Tendency` = c('Variance')
+vard[vard$`Central Tendency`=="Variance",][1,2:ncol(vard)] = 
+  sapply(happiness[2:6], var, na.rm=T)
+vard[] = lapply(vard, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+vard = melt(vard, id=c("Central Tendency"))
+vard$`Central Tendency`=NULL
+names(vard) = c("Year","Variance")
+ggplot(vard, aes(x=Year, y=Variance)) +
+  geom_bar(stat='identity',aes(fill=Year), colour='black')+
+  geom_text(label=vard$Variance, vjust=-0.3)+
+  theme_classic() + 
+  theme(plot.title = element_text(hjust=0.5),
+        text = element_text(size=10))
+```
+<h5>As seen above, the disproportionate spread in happiness shows a decreasing trend, albeit having always been relatively high.</h5>
+<h3> Trend in World Happiness </h3>
+```{r}
+#Happiness
+dfh1 = melt(happiness[order(happiness$`2019`, decreasing =TRUE),][1:10,],id=c('Country'))
+ggplot(dfh1) + geom_line(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  geom_point(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  labs(x='Year',y='Happiness Score', title='Happiness trends of the top 10 countries by Happiness Score') + theme_classic()+
+  theme(text = element_text(size=10)) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+<h5>
+We see varying trends in the happiness over the years, but it is evident that Finland's situation has improved drastically from 2017 and it has been the happiest country for the past 2 years. Austria saw a steep dip in 2017 but it has since recovered. The other countries have maintained a steady state of their condition.
+</h5>
+```{r}
+dfh2 = melt(happiness[order(happiness$`2019`, decreasing =TRUE),][147:156,],id=c('Country'))
+ggplot(dfh2) + geom_line(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  geom_point(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  labs(x='Year',y='Happiness Score', title='Happiness trends of the bottom 10 countries by Happiness Score') + theme_classic()+
+  theme(text = element_text(size=10)) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+On the other hand if we look at the bottom 10 countries on the list, most of them show a steady decline. Regrettably, India is one of those countries. Egypt showed a brief incline before going into decline. Togo and Zambia have showed a steady increase in their condition.
+<br>
+
+<h3>Effect of Life Expectancy on Happiness </h3>
+```{r}
+#Life Expectancy
+le = as.data.frame(cbind(countries,cdf2015$Health..Life.Expectancy.,
+                         cdf2016$Health..Life.Expectancy.,
+                                cdf2017$Health..Life.Expectancy.,
+                         cdf2019$Health..Life.Expectancy.,
+                                cdf2018$Health..Life.Expectancy.))
+names(le) = c('Country','2015', '2016', '2017', '2018', '2019')
+for (country in countries){
+  le[which(le$Country==country),][which(is.na(le[which(le$Country==country),]))]=median(as.numeric(le[which(le$Country==country),2:ncol(le)]), na.rm=T)
+}
+le1 = le[le$Country %in% hc,]
+le1[] = lapply(le1, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+dfl1 = melt(le1[order(le1$`2019`, decreasing =TRUE),],id=c('Country'))
+p1 = ggplot(dfl1) + geom_line(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  geom_point(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  labs(x='Year',y='Life Expectancy', title='Life Expectancy \n trends of top 5 countries \n by Happiness Score') + theme(text = element_text(size=8)) + theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5))+coord_cartesian(y=c(0.7,1.2))
+le[] = lapply(le, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+dfl2 = melt(le[order(le$`2019`, decreasing =TRUE),][1:5,],id=c('Country'))
+p2 = ggplot(dfl2) + geom_line(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  geom_point(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  labs(x='Year',y='Life Expectancy', title='Life Expectancy \n trends of top 5  countries \n by Life Expectancy') + theme(text = element_text(size=8)) + theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5))+coord_cartesian(y=c(0.7,1.2))
+grid.arrange(p1, p2, ncol=2)
+```
+<h5>
+With respect to the distribution of life expectancies of the top countries by the same, it can be seen that the top countries by happiness also have a high life expectancy. This can indicate that people who are assured to live longer
+tend to be happier.
+</h5>
+<br>
+<h3>Effect of GDP Per Capita on Happiness </h3>
+```{r}
+#GDP
+gdp = as.data.frame(cbind(countries,cdf2015$Economy..GDP.per.Capita.,
+                          cdf2016$Economy..GDP.per.Capita.,
+                                cdf2017$Economy..GDP.per.Capita.,
+                          cdf2018$Economy..GDP.per.Capita.,
+                                cdf2019$Economy..GDP.per.Capita.))
+names(gdp) = c('Country','2015', '2016', '2017', '2018', '2019')
+for (country in countries){
+  gdp[which(gdp$Country==country),][which(is.na(gdp[which(gdp$Country==country),]
+                                                ))]=median(as.numeric(gdp[which(gdp$Country==country),2:ncol(gdp)]), na.rm=T)
+}
+gdp1 = gdp[gdp$Country %in% hc,]
+gdp1[] = lapply(gdp1, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+dfg1 = melt(gdp1[order(gdp1$`2019`, decreasing =TRUE),][1:5,],id=c('Country'))
+p1 = ggplot(dfg1) + geom_line(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  geom_point(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  labs(x='Year',y='GDP p.c.', title='GDP p.c. trends \n of top 5 countries \n by Happiness') + theme(text = element_text(size=8)) + theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5))+ coord_cartesian(y=c(1.2,2.1))
+gdp[] = lapply(gdp, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+dfg2 = melt(gdp[order(gdp$`2019`, decreasing =TRUE),][1:5,],id=c('Country'))
+p2 = ggplot(dfg2) + geom_line(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  geom_point(aes(x=variable, y=value, colour=Country,group=Country)) + 
+  labs(x='Year',y='GDP p.c.', title='GDP p.c. trends \n of top 5 countries \n by GDP p.c.') + theme(text = element_text(size=8)) + theme_classic()+
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_cartesian(y=c(1.2,2.1))
+grid.arrange(p1, p2, ncol=2)
+```
+<h5>
+With respect to the distribution of GDP p.c. of the top countries by the same, it can be seen that the GDP p.c. of the top countries by happiness is not among the top values, but it is still relatively high. This indicates that GDP p.c. is also a very important factor that governs world happiness.
+<br>
+<br>
+The above graphs indicate a possible causal relationship between Happiness and certain factors. This will be made clear as we study the correlation plot.
+<h3>Contribution of different factors to World Happiness</h3>
+```{r}
+#Stacked Bar Chart
+facs = df2019[1:156,2:ncol(df2019)]
+normalize = function(x){
+  return ((x-min(x))/(max(x)-min(x)))
+}
+facs[] = lapply(facs, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)})
+facs$GDP = normalize(facs$Economy..GDP.per.Capita.)
+facs$Family = normalize(facs$Family)
+facs$`Life Expectancy` = normalize(facs$Health..Life.Expectancy.)
+facs$Freedom = normalize(facs$Freedom)
+facs$Generosity = normalize(facs$Generosity)
+facs$`Trust in Government` = normalize(facs$Trust..Government.Corruption.)
+facs = facs[1:15,c('Country','GDP','Family','Life Expectancy','Freedom','Generosity','Trust in Government')]
+dff = melt(facs, id='Country')
+dff[] = lapply(dff, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+ggplot(dff, aes(fill=variable, y=value, x=Country)) +
+  geom_bar(position='fill', stat='identity', color='black')+
+  labs(y='')+
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text = element_text(angle = 30))
+```
+<h5>
+The above graphs indicate that in the top 15 countries, people felt that having a high life expectancy (Life Expectancy), healthier relationships with their families (Family) and more freedom offered to them (Freedom) are the greatest factors that affect their sense of happiness. A high GDP p.c. and trustworthy governments follow close.
+</h5>
+<br>
+<h3>Contribution of different factors to World Happiness</h3>
+```{r, fig.height=15, fig.width=13}
+#Bar Chart
+rdf = copy(df2016)
+rdf[] = lapply(rdf, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+rdf$Country = NULL
+rdf = rdf %>% group_by(Region) %>%
+  summarise(Mean_Happiness = mean(Happiness.Score, na.rm=T),
+            Mean_gdp = mean(Economy..GDP.per.Capita.,na.rm=T),
+            Mean_family=mean(Family,na.rm=T),
+            Mean_freedom=mean(Freedom,na.rm=T),
+            Mean_LE = mean(Health..Life.Expectancy., na.rm=T))
+rdf = rdf[1:10,]
+names(rdf) = c("Region","Happiness", "GDP p.c.", "Family", "Freedom", "Life Expectancy")
+rdf = melt(rdf, id='Region')
+rdf[] = lapply(rdf, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+ggplot(rdf, aes(x=Region,y=value, fill=Region)) + geom_bar(stat='identity', col='black') +
+  geom_text( aes(label=value), vjust=-0.5) +
+  facet_grid(variable~.) + theme_classic() + 
+  labs(y='')+ 
+  theme(axis.text.x  = element_blank(),
+        text = element_text(size=9),
+        legend.text = element_text(size=11),
+        legend.title = element_text(size=11), 
+        strip.text.y = element_text(size=15),
+        axis.text.y = element_text(size=15))
+```
+<h5>
+The graphs show that Oceania and North America are the happiest regions, while Southern Asia and Sub-Saharan Africa are the least happiest. Notably, Southern Asia and Sub-Saharan Africa rank the second lowest and lowest across all the categories which emphasizes the desperate need for improvement in these regions. On the other hand, North America ranks highest in all categories, which is proof of their development.
+<h5>
+<br>
+<h3>Correlation between different factors that affect Happiness</h3>
+```{r}
+#corr plot/ heat map
+corr = df2019[1:156,3:ncol(df2019)]
+names(corr) = c('Happiness','GDP p.c.','Family','Life Expectancy','Freedom',
+                'Generosity','Trust in Government')
+corr[] = lapply(corr, function(x) {
+  x = type.convert(as.character(x), as.is=TRUE)})
+cormat = round(cor(corr),2)
+corrplot(cormat, method='square',type='lower', diag=FALSE
+         ,addCoef.col = "black")
+```
+<h5>
+As expected and as we saw earlier, GDP p.c. and Life Expectancy, along with Family affect Happiness the most. Let us verify the same. 
+```{r}
+df2019[] = lapply(df2019, function(x) {
+  x1 = type.convert(as.character(x), as.is=TRUE)
+  ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
+scatter = df2019[1:156,3:ncol(df2019)]
+names(scatter) = c('Happiness','GDP p.c.','Family','Life Expectancy','Freedom',
+                   'Generosity','Trust in Government')
+p1 = ggplot(scatter) + geom_point(aes(x=`GDP p.c.`,y=`Happiness`))
+p2 = ggplot(scatter) + geom_point(aes(x=`Life Expectancy`,y=`Happiness`))
+p3 = ggplot(scatter) + geom_point(aes(x=`Family`,y=`Happiness`))
+p4 = ggplot(scatter) + geom_point(aes(x=`Freedom`,y=`Happiness`))
+grid.arrange(p1, p2, p3, p4, ncol=2, nrow=2)
+```
+<br>
+Freedom is also an important factor for the same. Recall that we observed the same from the stacked bar chats. We also see some other highly positively correlated trends, for example, GDP and Life Expectancy, Life Expectancy and Family, etc. 
+</h5>
+
+<h3>
+Summary
+</h3>
+<h5>
+<ul>
+<li>There is a disproportionate spread of happiness throughout the world, and this trend had been since </li>
+<li>Countries that had ranked highest/lowest based on Happiness remained that way over the years </li>
+<li>GDP p.c., Life Expectancy, relationship with Family and Freedom offered to the citizen are the major factors that affect people's perception of happiness</li>
+<li>North America and Oceania rank the best based on both Happiness and the factors, while Sub-Saharan Africa and Southern Asia rank the lowest regarding the same</li>
+</ul>
+</h5>
+<br>
+<h3>
+Conclusion
+</h3>
+<h5>
+It is evident that as a country, India has a long way to come before it can catch up to the rest of the world. Not only based on Happiness, but also based on each of the factors that affect it, India ranks significantly low. We will explore this more in the dashboard by adding map plots and making the above plots interactive in such a way that we can see the development each country has gone through over the years. The disproportion in happiness is also not a good sign and we must reduce it. 
+</h5>
