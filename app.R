@@ -83,9 +83,8 @@ rdf[] = lapply(rdf, function(x) {
   ifelse(grepl("^[0-9.]+$", x1), round(as.numeric(x1), 3), x1)})
 
 
-corr = df2019[1:156,3:ncol(df2019)]
-names(corr) = c('Happiness','GDP_per_capita','Family','Life_Expectancy','Freedom',
-                'Generosity','Trust in Government')
+corr = df2019[1:156,3:(ncol(df2019)-2)]
+names(corr) = c('Happiness','GDP_per_capita','Family','Life_Expectancy','Freedom')
 corr[] = lapply(corr, function(x) {
   x = type.convert(as.character(x), as.is=TRUE)})
 
@@ -123,8 +122,24 @@ ui <- dashboardPage(
               tags$h4('The dashboard is a visual approach to analyze happiness across the world.
                      Through the use of multiple interactive plots, users can see the variance in 
                      happiness on a regional and country level, and also study the various factors
-                     that affect it. The plots might take some time to render, apologies for that.'),
-              tags$br()),
+                     that affect it. The key variables that we will consider are:'),
+              tags$h4(
+                tags$ol(
+                  tags$li('Happiness.Score - Measure of happiness that is calculated using the below factors'),
+                  tags$li('Economy..GDP.per.Capita - Per capita GDP of the country'),
+                  tags$li('Family - Measure of satisfaction provided by family'),
+                  tags$li('Health..Life.Expectancy. - Life expectancy in the country'),
+                  tags$li('Freedom - Measure of freedom provided to the individual by the government, society, etc.'),
+                )
+              ),
+              tags$br(),
+              HTML("<h4>The data can be found <a href='https://www.kaggle.com/datasets/unsdsn/world-happiness'> here</a>. 
+                   We have 5 years worth data from 2015-2019, thereby making a time series analysis possible,
+                   each of which has the countrywise data for that year
+                   and every country is also divided into what region of the world it belongs to, so we can perform
+                   both country and region wise analysis.</h4>"),
+              tags$br(),
+              tags$h4('The plots might take some time to render, apologies for that.')),
       tabItem("region",
               tabsetPanel(
                 tabPanel("Region vs Region",
